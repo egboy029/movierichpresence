@@ -34,6 +34,8 @@ logger = logging.getLogger(__name__)
 # Load environment variables
 load_dotenv()
 DISCORD_CLIENT_ID = os.getenv("DISCORD_CLIENT_ID")
+DISNEY_CLIENT_ID = os.getenv("DISNEY_CLIENT_ID") or DISCORD_CLIENT_ID
+NETFLIX_CLIENT_ID = os.getenv("NETFLIX_CLIENT_ID") or DISCORD_CLIENT_ID
 TMDB_API_KEY = os.getenv("TMDB_API_KEY")
 TMDB_API_BASE = 'https://api.themoviedb.org/3'
 UPDATE_INTERVAL = 15  # seconds
@@ -1119,7 +1121,7 @@ def check_system_processes() -> Optional[Dict[str, Union[str, bool, int]]]:
 
 def detect_media():
     """Detect media being watched."""
-    global current_media, start_timestamp
+    global current_media, start_timestamp, rpc
     
     logger.debug("Checking for media...")
     
@@ -1216,6 +1218,10 @@ def detect_media():
     else:
         logger.info("Media detected by system process check, bypassing false positive filter")
     
+    # Check if the service has changed which requires reconnecting with a different client ID
+    service_changed = (current_media and 
+                      current_media.get("service") != media_info.get("service"))
+    
     # Track time since last update to force periodic updates
     current_time = int(time.time())
     force_update = False
@@ -1239,7 +1245,35 @@ def detect_media():
         # Only reset timestamp if media actually changed (not on forced updates)
         if not force_update or not start_timestamp:
             start_timestamp = current_time
+        
+        # If the service has changed or we're not connected, we need to reconnect with the appropriate client ID
+        if service_changed or not ('rpc' in globals() and rpc):
+            # Close existing connection if there is one
+            if 'rpc' in globals() and rpc:
+                try:
+                    rpc.clear()
+                    rpc.close()
+                    logger.info("Closed existing Discord connection")
+                except Exception as e:
+                    logger.error(f"Error closing Discord connection: {e}")
             
+            # Select the appropriate client ID based on the service
+            client_id = DISCORD_CLIENT_ID
+            if media_info["service"] == "Disney+":
+                client_id = DISNEY_CLIENT_ID
+                logger.info("Using Disney+ client ID for Discord connection")
+            elif media_info["service"] == "Netflix":
+                client_id = NETFLIX_CLIENT_ID
+                logger.info("Using Netflix client ID for Discord connection")
+            
+            # Connect with the selected client ID
+            try:
+                rpc = Presence(client_id)
+                rpc.connect()
+                logger.info(f"Connected to Discord with {media_info['service']} client ID")
+            except Exception as e:
+                logger.error(f"Failed to connect to Discord: {e}")
+        
         current_media = media_info.copy()  # Create a copy to avoid reference issues
         
         # Don't try to update Discord if it's not connected
@@ -1257,7 +1291,7 @@ def detect_media():
 
 def main():
     """Main function to run the Discord Rich Presence."""
-    logger.info("Starting Discord Rich Presence for Netflix & Disney+")
+    logger.info("Starting Discord Rich Presence for Egbot & Chill 🍕🍿")
     
     # Check if environment variables are set
     if not DISCORD_CLIENT_ID:
@@ -1383,7 +1417,11 @@ def connect_to_discord():
                 logger.error("Maximum retry attempts reached.")
                 logger.error("The application will continue running but won't update your Discord status.")
                 logger.error("Please make sure Discord is running and your Client ID is correct.")
-                logger.error(f"Current Client ID: {DISCORD_CLIENT_ID}")
+                logger.error("Make sure you've set up the separate Client IDs for Disney+ and Netflix.")
+                logger.error(f"Current Client IDs:")
+                logger.error(f"Default: {DISCORD_CLIENT_ID}")
+                logger.error(f"Disney+: {DISNEY_CLIENT_ID}")
+                logger.error(f"Netflix: {NETFLIX_CLIENT_ID}")
                 return False
 
 def safe_cleanup():

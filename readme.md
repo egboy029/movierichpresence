@@ -59,6 +59,26 @@ DISCORD_CLIENT_ID=your_discord_application_id
 TMDB_API_KEY=your_tmdb_api_key
 ```
 
+### Separate Discord Application Names (Optional)
+
+For a more integrated experience, you can create separate Discord applications that will display differently:
+
+1. Create two separate Discord applications named "Disney+" and "Netflix":
+   - Go to [Discord Developer Portal](https://discord.com/developers/applications)
+   - Create an application named "Disney+"
+   - Create another application named "Netflix"
+   - For each app, upload their respective logos
+
+2. Update your `.env` file with all the application IDs:
+```
+DISCORD_CLIENT_ID=your_default_application_id
+DISNEY_CLIENT_ID=your_disney_plus_application_id
+NETFLIX_CLIENT_ID=your_netflix_application_id
+TMDB_API_KEY=your_tmdb_api_key
+```
+
+With this setup, when you watch Disney+ content, Discord will show "Disney+" as the app name, and when you watch Netflix, it will show "Netflix" as the app name.
+
 ### 4. Run the Application
 
 Either:
