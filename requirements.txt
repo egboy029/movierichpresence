@@ -1,0 +1,6 @@
+psutil==5.9.5
+pywin32==306
+python-dotenv==1.0.0
+requests==2.31.0
+pypresence==4.3.0
+selenium==4.11.2 
